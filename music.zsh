@@ -21,24 +21,24 @@ music() {
     _music_load_playlists
 
     if [[ -z "$1" ]]; then
-        echo "Playlists disponibles:"
+        echo "Available playlists:"
         for key in ${(k)PLAYLISTS}; do
             echo "  music $key"
         done
-        echo "\nUso: music <playlist> [--shuffle|-s]"
-        echo "\nControles:"
-        echo "  espacio    pausa/play"
-        echo "  9/0        bajar/subir volumen"
-        echo "  ↑/↓        siguiente/anterior"
-        echo "  ←/→        retroceder/avanzar 5s"
-        echo "  q          salir"
+        echo "\nUsage: music <playlist> [--shuffle|-s]"
+        echo "\nControls:"
+        echo "  space      pause/play"
+        echo "  9/0        volume down/up"
+        echo "  ↑/↓        next/previous track"
+        echo "  ←/→        seek -5s/+5s"
+        echo "  q          quit"
         return 0
     fi
 
-    # comprobar dependencias
+    # check dependencies
     for dep in mpv yt-dlp socat jq; do
         if ! command -v $dep &>/dev/null; then
-            echo "Error: $dep no esta instalado"
+            echo "Error: $dep is not installed"
             return 1
         fi
     done
@@ -55,13 +55,13 @@ music() {
     local url="${PLAYLISTS[$name]:-$name}"
     local sock="/tmp/mpv-music-$$"
 
-    # lanzar mpv en background sin terminal
-    mpv --no-terminal --no-video --volume=40 \
+    # launch mpv in background without terminal
+    mpv --no-terminal --no-video --volume=100 \
         --input-ipc-server="$sock" \
         --ytdl-raw-options=format="ba/b" $shuffle "$url" &
     local mpv_pid=$!
 
-    # esperar a que el socket exista
+    # wait for socket to exist
     for i in {1..30}; do
         [[ -S "$sock" ]] && break
         sleep 0.2
@@ -87,14 +87,14 @@ music() {
     local paused=0
     local bar_size=20
 
-    # loop de status
+    # status loop
     while kill -0 $mpv_pid 2>/dev/null; do
         local title=$(_mpv_get media-title)
         local vol=$(_mpv_get volume)
         local pos=$(_mpv_get time-pos)
         local dur=$(_mpv_get duration)
 
-        # formatear tiempos
+        # format times
         local pos_fmt="--:--"
         local dur_fmt="--:--"
         if [[ -n "$pos" ]]; then
@@ -108,7 +108,7 @@ music() {
             dur_fmt=$(printf "%02d:%02d" $dm $ds)
         fi
 
-        # barra de progreso
+        # progress bar
         local bar=""
         if [[ -n "$pos" && -n "$dur" ]]; then
             local pos_s=${pos%.*}
@@ -132,7 +132,7 @@ music() {
         local pause_icon=""
         if (( paused )); then pause_icon=" ⏸"; fi
 
-        # truncar titulo para que quepa en una linea
+        # truncate title to fit in one line
         local cols=$(tput cols 2>/dev/null || echo 80)
         local fixed_len=$(( ${#name} + ${#vol_int} + ${#pos_fmt} + ${#dur_fmt} + 30 + bar_size ))
         local max_title=$(( cols - fixed_len ))
@@ -143,7 +143,7 @@ music() {
 
         printf "\r${gold}♪ ${name}${pause_icon}${reset}  ${purple}${disp_title}${reset}  ${cyan}Vol: ${vol_int:-40}%%${reset}  ${white}${pos_fmt} ${bar} ${dur_fmt}${reset}\e[K"
 
-        # leer tecla con timeout
+        # read key with timeout
         local key=""
         read -sk1 -t1 key 2>/dev/null
         case "$key" in

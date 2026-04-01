@@ -5,16 +5,16 @@ INSTALL_DIR="$HOME/.zsh-music-player"
 
 echo "=== zsh-music-player uninstaller ==="
 
-# eliminar directorio
+# remove directory
 if [[ -d "$INSTALL_DIR" ]]; then
     rm -rf "$INSTALL_DIR"
-    echo "Eliminado: $INSTALL_DIR"
+    echo "Removed: $INSTALL_DIR"
 fi
 
-# eliminar lineas de .zshrc
+# remove lines from .zshrc
 if grep -qF "zsh-music-player" "$HOME/.zshrc" 2>/dev/null; then
     sed -i '/zsh-music-player/d' "$HOME/.zshrc"
-    echo "Eliminado de .zshrc"
+    echo "Removed from .zshrc"
 fi
 
-echo "Desinstalacion completa. Ejecuta: source ~/.zshrc"
+echo "Uninstall complete. Run: source ~/.zshrc"

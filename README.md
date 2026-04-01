@@ -7,65 +7,69 @@ Built with `mpv` + `yt-dlp` and controlled via IPC socket from your terminal.
 ![shell](https://img.shields.io/badge/shell-zsh-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
+## Preview
+
+![preview](screenshots/preview.png)
+
+```
+♪ chill       S I C K       Vol: 40%      00:00 ━━━━━━━━━━━━━━━━━━━━ 05:32
+↓                ↓              ↓              ↓              ↓           ↓
+playlist name    track title    volume level   position       progress    duration
+```
+
 ## Features
 
 - Play YouTube playlists directly from the terminal
 - No ads (bypasses YouTube web player via yt-dlp)
-- Colored single-line status: playlist name, track title, volume, progress bar
+- Colored single-line status with progress bar
 - Keyboard controls (volume, seek, next/prev, pause)
-- Custom playlist aliases via simple config file
+- Custom playlist aliases via config file
 - Shuffle mode
 
-## Requirements
+## Dependencies
 
-- **zsh** (your default shell must be zsh)
-- **mpv** - media player
-- **yt-dlp** - YouTube extractor (must be up to date)
-- **socat** - IPC socket communication
-- **jq** - JSON parsing
+<details>
+<summary><b>Debian / Ubuntu</b></summary>
 
-### Install dependencies
-
-**Debian / Ubuntu:**
 ```bash
 sudo apt install mpv socat jq
 ```
+</details>
 
-**Arch Linux:**
+<details>
+<summary><b>Arch Linux</b></summary>
+
 ```bash
 sudo pacman -S mpv socat jq
 ```
+</details>
 
-**Fedora:**
+<details>
+<summary><b>Fedora</b></summary>
+
 ```bash
 sudo dnf install mpv socat jq
 ```
+</details>
 
-**macOS:**
+<details>
+<summary><b>macOS</b></summary>
+
 ```bash
 brew install mpv socat jq
 ```
+</details>
 
-### Install yt-dlp (latest version required)
+### yt-dlp (latest version required)
 
-The version from your package manager may be outdated. Install the latest directly:
+Package managers often ship outdated versions. Install the latest directly:
 
 ```bash
 sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
 sudo chmod a+rx /usr/local/bin/yt-dlp
 ```
 
-Verify it works:
-```bash
-yt-dlp --version
-```
-
-If YouTube changes break extraction, update with:
-```bash
-sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
-```
-
-> **Note:** yt-dlp may require a JavaScript runtime (deno) for some YouTube formats. If you see a warning about it, install deno: `curl -fsSL https://deno.land/install.sh | sh`
+> **Note:** yt-dlp may require a JavaScript runtime. If you see a warning about it, install deno: `curl -fsSL https://deno.land/install.sh | sh`
 
 ## Install
 
@@ -83,14 +87,12 @@ Edit `~/.zsh-music-player/playlists.conf`:
 
 ```conf
 # Format: name=URL
-# One playlist per line. Lines starting with # are comments.
-
 lofi=https://www.youtube.com/playlist?list=PLofht4PTcKYnaH8w5olJCI-wUVxuoMHqM
 rock=https://www.youtube.com/playlist?list=PLxxxxxxx
 chill=https://www.youtube.com/playlist?list=PLyyyyyyy
 ```
 
-Then just use the name you defined:
+Then:
 
 ```bash
 music lofi
@@ -99,11 +101,10 @@ music lofi
 ## Usage
 
 ```bash
-music              # list available playlists and controls
-music lofi         # play a playlist by name
+music              # list available playlists
+music lofi         # play a playlist
 music lofi -s      # play shuffled
-music lofi --shuffle
-music "https://www.youtube.com/playlist?list=PLxxxxx"   # play any URL directly
+music "URL"        # play any YouTube URL directly
 ```
 
 ## Controls
@@ -125,17 +126,12 @@ music "https://www.youtube.com/playlist?list=PLxxxxx"   # play any URL directly
 
 ## Troubleshooting
 
-**"Error: yt-dlp no esta instalado"**
-Install yt-dlp following the instructions above.
-
-**No audio / "Requested format is not available"**
-Your yt-dlp is outdated. Update it with the curl command above.
-
-**"No supported JavaScript runtime"**
-Install deno: `curl -fsSL https://deno.land/install.sh | sh`
-
-**Status line overflows / multiple lines**
-Resize your terminal wider, or the title will be auto-truncated.
+| Problem | Solution |
+|---------|----------|
+| `Error: yt-dlp is not installed` | Install yt-dlp with the curl command above |
+| No audio / format not available | Update yt-dlp to the latest version |
+| No supported JavaScript runtime | Install deno: `curl -fsSL https://deno.land/install.sh \| sh` |
+| Status line overflows | Resize your terminal wider |
 
 ## Uninstall
 
@@ -145,6 +141,13 @@ chmod +x uninstall.sh
 ./uninstall.sh
 source ~/.zshrc
 ```
+
+## Built with
+
+- [mpv](https://github.com/mpv-player/mpv) - Media player
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - YouTube extractor
+- [socat](http://www.dest-unreach.org/socat/) - IPC socket communication
+- [jq](https://github.com/jqlang/jq) - JSON parsing
 
 ## License
 
