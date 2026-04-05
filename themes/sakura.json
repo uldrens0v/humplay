@@ -1,0 +1,22 @@
+{
+  "name": "sakura",
+  "description": "Soft pinks and cherry blossom",
+  "colors": {
+    "primary": [255, 180, 200],
+    "secondary": [220, 150, 180],
+    "accent": [255, 120, 160],
+    "dim": [180, 140, 160],
+    "highlight": [255, 200, 220],
+    "bar": [255, 140, 180],
+    "bar_dim": [120, 80, 100]
+  },
+  "visualizer": {
+    "stops": [
+      [255, 180, 200],
+      [255, 140, 180],
+      [240, 120, 200],
+      [200, 140, 220],
+      [180, 160, 240]
+    ]
+  }
+}

@@ -11,26 +11,25 @@ Built with `mpv` + `yt-dlp` and controlled via IPC socket from your terminal.
 
 ![preview](screenshots/preview.png)
 
-```
-  ██          ██                ██
-  ██ ██    ██ ██ ██      ██    ██ ██
-  ██ ██ ██ ██ ██ ██ ██ ██ ██ ██ ██ ██
-  G──────────────────────────────────A
-▶ YouTube · chill  ♪ S I C K  Vol: 40%  00:32 ━━━━━━━━━━━━ 03:21
-```
-
 ## Features
 
 - Play YouTube playlists directly from the terminal
 - No ads (bypasses YouTube web player via yt-dlp)
-- **RGB bar visualizer** that adapts to terminal width, with G (grave) to A (agudo) frequency indicator
+- **RGB bar visualizer** that adapts to terminal width, with G (bass) to A (treble) frequency indicator
+- **Isolated visualizer**: reacts only to the player's audio, not system-wide sound (via PulseAudio)
 - **Track list overlay** (press `t`) showing previous and upcoming songs with real-time updates
+- **Track search** (press `f`) — find tracks by name within the current playlist
+- **Theme system**: 14 color themes loaded from JSON files — set permanently, cycle live, or create your own
+- **Playback speed** control (press `s`) — cycles through 1x, 1.25x, 1.5x, 2x, 3x with themed arrow indicators
+- **Track prefetch**: resolves and pre-downloads the next 3 tracks in background to reduce song change delay
 - **Platform logo** next to playlist name (YouTube, SoundCloud, Spotify, Bandcamp)
+- **Fetch playlists** from a YouTube channel by username or profile URL
 - Full-screen alternate buffer rendering (no terminal scroll pollution)
 - Keyboard controls (volume, seek, next/prev, pause)
 - Multi-platform support: YouTube, SoundCloud, Bandcamp, Spotify
 - Custom playlist aliases via config file
 - Shuffle mode
+- Clean audio startup/shutdown (no pops or crackles)
 
 ## Dependencies
 
@@ -48,6 +47,7 @@ Built with `mpv` + `yt-dlp` and controlled via IPC socket from your terminal.
 | Tool | Purpose |
 |------|---------|
 | [cava](https://github.com/karlstav/cava) | RGB bar visualizer |
+| [PulseAudio](https://www.freedesktop.org/wiki/Software/PulseAudio/) | Isolated visualizer (reacts only to player audio) |
 | [spotdl](https://github.com/spotDL/spotify-downloader) | Spotify playlist support |
 
 ### Install dependencies
@@ -61,6 +61,8 @@ sudo apt install mpv socat jq
 
 # Optional: RGB bar visualizer
 sudo apt install cava
+
+# PulseAudio is usually installed by default
 ```
 </details>
 
@@ -99,6 +101,28 @@ brew install mpv socat jq
 # Optional: RGB bar visualizer
 brew install cava
 ```
+
+> **Note:** The isolated visualizer feature requires PulseAudio (`pactl`), which is Linux-only. On macOS, the visualizer will react to all system audio.
+</details>
+
+<details>
+<summary><b>Windows (via WSL)</b></summary>
+
+Windows is supported through WSL (Windows Subsystem for Linux). Native Windows is not supported.
+
+```bash
+# 1. Install WSL (PowerShell as admin)
+wsl --install
+
+# 2. Inside WSL (Ubuntu), install dependencies
+sudo apt install mpv socat jq cava
+
+# 3. For audio to work, install PulseAudio on Windows
+#    and set PULSE_SERVER in WSL:
+export PULSE_SERVER=tcp:$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}')
+```
+
+> **Note:** WSL audio setup requires extra configuration. See [WSL audio guide](https://learn.microsoft.com/en-us/windows/wsl/) for details. For the simplest experience, use Linux or macOS.
 </details>
 
 ### yt-dlp (latest version required)
@@ -130,25 +154,104 @@ Edit `~/.zsh-music-player/playlists.conf`:
 # Format: name=URL
 lofi=https://www.youtube.com/playlist?list=PLofht4PTcKYnaH8w5olJCI-wUVxuoMHqM
 rock=https://www.youtube.com/playlist?list=PLxxxxxxx
-chill=https://www.youtube.com/playlist?list=PLyyyyyyy
+
+# SoundCloud
+sc=https://soundcloud.com/artist-name
+
+# Bandcamp (format: artist.bandcamp.com/album/name)
+bc=https://c418.bandcamp.com/album/minecraft-volume-alpha
+
+# Spotify (requires spotdl)
+chill-spotify=https://open.spotify.com/playlist/37i9dQZF1DX4WYpdgoIcn6
 ```
 
-Or fetch playlists automatically from a YouTube channel:
+Or fetch playlists automatically from a YouTube channel (by name or URL):
 
 ```bash
 music fetch uldrens0v
+music fetch https://youtube.com/@uldrens0v
 ```
 
 ## Usage
 
 ```bash
-music                  # list available playlists
-music lofi             # play a playlist
-music lofi -s          # play shuffled
-music lofi --no-vis    # play without visualizer
-music "URL"            # play any YouTube URL directly
-music fetch <source>   # import playlists from a channel/URL
+music                        # list available playlists
+music lofi                   # play a playlist
+music lofi -s                # play shuffled
+music lofi --no-vis          # play without visualizer
+music lofi --theme=winter    # play with a specific theme
+music "URL"                  # play any URL directly
+music fetch <source>         # import playlists from a channel/URL
+music --theme                # show available themes
+music --theme autumn         # set default theme permanently
 ```
+
+## Themes
+
+14 built-in color themes with distinct gradients for the visualizer and UI:
+
+| Theme | Style |
+|-------|-------|
+| `summer` | Warm yellows and oranges (default) |
+| `autumn` | Deep amber and brown tones |
+| `winter` | Cool blues and whites |
+| `spring` | Fresh greens and pinks |
+| `ocean` | Deep teal and aquamarine |
+| `neon` | Electric magenta, cyan and yellow |
+| `sakura` | Soft pinks and cherry blossom |
+| `ember` | Intense reds and fire tones |
+| `cyber` | Matrix-style bright greens |
+| `midnight` | Deep purples and indigo |
+| `vapor` | Vaporwave pink, blue and peach |
+| `arctic` | Icy whites and pale blues |
+| `dracula` | Classic Dracula palette (purple, pink, green) |
+| `mono` | Monochrome grayscale |
+
+Set a persistent theme: `music --theme winter`
+
+Cycle themes live during playback: press `c`
+
+### Custom themes
+
+Themes are JSON files in the `themes/` directory. To create your own, add a `.json` file:
+
+```json
+{
+  "name": "mytheme",
+  "description": "Short description of the palette",
+  "colors": {
+    "primary": [255, 200, 50],
+    "secondary": [255, 150, 50],
+    "accent": [255, 100, 80],
+    "dim": [180, 140, 60],
+    "highlight": [255, 220, 80],
+    "bar": [255, 140, 50],
+    "bar_dim": [120, 90, 30]
+  },
+  "visualizer": {
+    "stops": [
+      [255, 220, 50],
+      [255, 150, 30],
+      [255, 80, 30],
+      [255, 50, 100],
+      [200, 30, 150]
+    ]
+  }
+}
+```
+
+| Field | Description |
+|-------|-------------|
+| `primary` | Main text color (track title, labels) |
+| `secondary` | Secondary text (artist, status info) |
+| `accent` | Emphasis elements (active indicators) |
+| `dim` | Muted text (timestamps, inactive items) |
+| `highlight` | Bold highlights (current track marker) |
+| `bar` | Progress bar fill color |
+| `bar_dim` | Progress bar background color |
+| `visualizer.stops` | 5 RGB gradient stops for the frequency bars (low to high) |
+
+Save the file as `themes/mytheme.json` and it will appear automatically in `music --theme`.
 
 ## Controls
 
@@ -158,13 +261,27 @@ music fetch <source>   # import playlists from a channel/URL
 | `-` / `+` | volume down / up (5%) |
 | `↑` / `↓` | previous / next track |
 | `←` / `→` | seek -5s / +5s |
+| `s` | cycle playback speed (1x → 1.25x → 1.5x → 2x → 3x) |
 | `v` | toggle RGB bar visualizer |
 | `t` | toggle track list |
-| `q` | quit |
+| `f` | search tracks in playlist |
+| `c` | cycle color theme |
+| `q` | quit (graceful shutdown) |
+
+### Search mode
+
+Press `f` to enter search mode. Type to filter tracks by name:
+
+- `↑` / `↓` — navigate results
+- `Enter` — jump to the selected track
+- `Esc` — cancel search
+- `Backspace` — delete last character
+
+Up to 8 matching results are displayed. The search closes the track list if it was open.
 
 ## RGB Bar Visualizer
 
-When `cava` is installed, the player displays an RGB frequency visualizer that **adapts to your terminal width**. Each bar is colored in a gradient from red (bass) to blue (treble):
+When `cava` is installed, the player displays an RGB frequency visualizer that **adapts to your terminal width**. Each bar is colored in a theme-aware gradient:
 
 ```
   ██                    ██            ██
@@ -177,8 +294,14 @@ When `cava` is installed, the player displays an RGB frequency visualizer that *
 
 - **G** = Grave (bass/low frequencies)
 - **A** = Agudo (treble/high frequencies)
-- Color gradient: Red -> Yellow -> Green -> Cyan -> Blue
+- Colors change based on the active theme
 - Bar count adapts dynamically to terminal width
+
+### Isolated audio
+
+When PulseAudio is available (`pactl`), the visualizer reacts **only to the player's audio**, ignoring other system sounds (browser, notifications, etc.). This is done automatically by routing mpv through a dedicated PulseAudio sink. The sink is created on start and cleaned up on exit.
+
+If PulseAudio is not available, the visualizer falls back to monitoring all system audio.
 
 Toggle with `v` during playback. Use `--no-vis` to start without it.
 
@@ -203,15 +326,44 @@ Press `t` during playback to open the track list overlay:
 - Updates in real-time when the track changes
 - Press `t` again to close
 
+## Multi-platform support
+
+| Platform | URL format | Requirements |
+|----------|-----------|--------------|
+| YouTube | `youtube.com/playlist?list=...` | yt-dlp |
+| SoundCloud | `soundcloud.com/artist` or `.../sets/playlist` | yt-dlp |
+| Bandcamp | `artist.bandcamp.com/album/name` | yt-dlp |
+| Spotify | `open.spotify.com/playlist/...` | spotdl (`pipx install spotdl`) |
+
+Import playlists from any supported platform:
+
+```bash
+music fetch https://soundcloud.com/artist/sets/playlist
+music fetch https://artist.bandcamp.com/album/name
+music fetch https://open.spotify.com/playlist/xxxxx
+```
+
 ## How it works
 
-1. Launches `mpv` in the background with `--no-terminal` and an IPC socket
-2. Opens an alternate screen buffer for clean full-screen rendering
-3. A zsh loop queries mpv properties (title, volume, position, playlist) via the socket using `socat`
-4. `cava` sends audio frequency data through a FIFO pipe; bars are dynamically grouped to fit terminal width
-5. Renders a multi-line display (track list + visualizer + status bar) from a fixed top position using ANSI escape codes
-6. Reads keyboard input with `read -sk1` and sends commands back to mpv via IPC
-7. On exit, restores the original terminal screen
+1. Cleans up any orphaned processes/sinks from previous sessions
+2. Creates an isolated PulseAudio null-sink (if available) so the visualizer only reacts to player audio
+3. Launches `mpv` paused at volume 0, routed to the null-sink, with IPC socket
+4. After IPC is ready, creates the PulseAudio loopback (null-sink → speakers) and fades in
+5. Opens an alternate screen buffer for clean full-screen rendering
+6. `cava` monitors the null-sink and sends frequency data through a FIFO pipe
+7. Prefetches the next 3 tracks in background (URL resolution + partial download) to reduce gaps
+8. A zsh loop queries mpv properties (title, volume, position, playlist) via the socket using `socat`
+9. Renders a multi-line display (track list + visualizer + status bar) from a fixed top position using ANSI escape codes
+10. Reads keyboard input with `read -sk1` and sends commands back to mpv via IPC
+11. On exit: disconnects loopback first (silences speakers), then gracefully quits mpv, then removes the null-sink
+
+## Platform compatibility
+
+| OS | Status | Notes |
+|----|--------|-------|
+| **Linux** | Full support | All features including isolated visualizer |
+| **macOS** | Supported | Visualizer reacts to all system audio (no PulseAudio) |
+| **Windows** | WSL only | Requires WSL + extra audio configuration. Native Windows is not supported |
 
 ## Troubleshooting
 
@@ -221,8 +373,10 @@ Press `t` during playback to open the track list overlay:
 | No audio / format not available | Update yt-dlp to the latest version |
 | No supported JavaScript runtime | Install deno: `curl -fsSL https://deno.land/install.sh \| sh` |
 | No visualizer bars | Install cava: `sudo apt install cava` |
+| Visualizer reacts to all system audio | Install PulseAudio (usually pre-installed on Linux) |
 | Status line overflows | Resize your terminal wider (80+ columns recommended) |
 | Track list shows "Track N" instead of titles | Titles load as mpv fetches each track; wait a moment |
+| Bandcamp URL not working | Use format `artist.bandcamp.com/album/name`, not `bandcamp.com/...` |
 
 ## Uninstall
 

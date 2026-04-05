@@ -1,0 +1,22 @@
+{
+  "name": "neon",
+  "description": "Electric magenta, cyan and yellow",
+  "colors": {
+    "primary": [255, 0, 255],
+    "secondary": [0, 255, 200],
+    "accent": [255, 255, 0],
+    "dim": [150, 100, 180],
+    "highlight": [255, 50, 255],
+    "bar": [0, 255, 180],
+    "bar_dim": [60, 100, 80]
+  },
+  "visualizer": {
+    "stops": [
+      [255, 0, 255],
+      [200, 0, 255],
+      [0, 255, 200],
+      [0, 200, 255],
+      [255, 255, 0]
+    ]
+  }
+}

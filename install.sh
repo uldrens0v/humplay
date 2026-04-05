@@ -28,6 +28,7 @@ fi
 echo "Installing to $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
 cp "$REPO_DIR/music.zsh" "$INSTALL_DIR/"
+cp -r "$REPO_DIR/themes" "$INSTALL_DIR/"
 
 # create playlists.conf if it doesn't exist
 if [[ ! -f "$INSTALL_DIR/playlists.conf" ]]; then

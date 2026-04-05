@@ -1,0 +1,22 @@
+{
+  "name": "autumn",
+  "description": "Deep amber and brown tones",
+  "colors": {
+    "primary": [210, 150, 50],
+    "secondary": [180, 110, 40],
+    "accent": [200, 80, 30],
+    "dim": [160, 120, 70],
+    "highlight": [210, 160, 60],
+    "bar": [200, 100, 30],
+    "bar_dim": [100, 70, 30]
+  },
+  "visualizer": {
+    "stops": [
+      [220, 180, 50],
+      [200, 130, 30],
+      [180, 80, 20],
+      [140, 50, 20],
+      [100, 20, 20]
+    ]
+  }
+}

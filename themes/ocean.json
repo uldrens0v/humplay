@@ -1,0 +1,22 @@
+{
+  "name": "ocean",
+  "description": "Deep teal and aquamarine",
+  "colors": {
+    "primary": [0, 200, 200],
+    "secondary": [50, 160, 180],
+    "accent": [0, 220, 160],
+    "dim": [100, 160, 160],
+    "highlight": [50, 240, 220],
+    "bar": [0, 180, 180],
+    "bar_dim": [30, 80, 90]
+  },
+  "visualizer": {
+    "stops": [
+      [0, 220, 200],
+      [0, 180, 220],
+      [30, 160, 255],
+      [60, 200, 240],
+      [100, 240, 200]
+    ]
+  }
+}

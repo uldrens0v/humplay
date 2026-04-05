@@ -1,0 +1,22 @@
+{
+  "name": "cyber",
+  "description": "Matrix-style bright greens",
+  "colors": {
+    "primary": [0, 255, 100],
+    "secondary": [0, 200, 80],
+    "accent": [80, 255, 150],
+    "dim": [80, 180, 100],
+    "highlight": [0, 255, 120],
+    "bar": [0, 230, 90],
+    "bar_dim": [0, 80, 30]
+  },
+  "visualizer": {
+    "stops": [
+      [0, 255, 100],
+      [0, 220, 80],
+      [50, 255, 50],
+      [80, 200, 120],
+      [0, 180, 160]
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "ember",
+  "description": "Intense reds and fire tones",
+  "colors": {
+    "primary": [255, 80, 30],
+    "secondary": [255, 140, 40],
+    "accent": [255, 50, 50],
+    "dim": [180, 120, 80],
+    "highlight": [255, 100, 40],
+    "bar": [255, 60, 20],
+    "bar_dim": [120, 50, 20]
+  },
+  "visualizer": {
+    "stops": [
+      [255, 30, 0],
+      [255, 80, 0],
+      [255, 140, 20],
+      [200, 100, 40],
+      [150, 50, 80]
+    ]
+  }
+}

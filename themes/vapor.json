@@ -1,0 +1,22 @@
+{
+  "name": "vapor",
+  "description": "Vaporwave pink, blue and peach",
+  "colors": {
+    "primary": [255, 100, 200],
+    "secondary": [100, 200, 255],
+    "accent": [255, 180, 100],
+    "dim": [160, 130, 170],
+    "highlight": [255, 120, 220],
+    "bar": [180, 80, 200],
+    "bar_dim": [80, 50, 100]
+  },
+  "visualizer": {
+    "stops": [
+      [255, 100, 200],
+      [200, 80, 255],
+      [100, 200, 255],
+      [80, 180, 200],
+      [180, 100, 220]
+    ]
+  }
+}

@@ -2,3 +2,11 @@
 *.swo
 *~
 .DS_Store
+.idea/
+.vscode/
+.theme
+*.m3u
+/spotify-*.m3u
+reemplazar.conf
+demo.tape
+demo.cast
