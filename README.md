@@ -15,10 +15,10 @@ Built with `mpv` + `yt-dlp` and controlled via IPC socket from your terminal.
 
 - Play YouTube playlists directly from the terminal
 - No ads (bypasses YouTube web player via yt-dlp)
-- **RGB bar visualizer** that adapts to terminal width, with G (bass) to A (treble) frequency indicator
+- **2 visualizer styles** cycled with `v`: bars and braille — both adapting to terminal width with a G (bass) to A (treble) frequency indicator
 - **Isolated visualizer**: reacts only to the player's audio, not system-wide sound (via PulseAudio)
 - **Track list overlay** (press `t`) showing previous and upcoming songs with real-time updates
-- **Track search** (press `f`) — find tracks by name within the current playlist
+- **Track search** (press `f`) — find tracks by name within the current playlist, with instant prefetch of highlighted results
 - **Theme system**: 14 color themes loaded from JSON files — set permanently, cycle live, or create your own
 - **Playback speed** control (press `s`) — cycles through 1x, 1.25x, 1.5x, 2x, 3x with themed arrow indicators
 - **Track prefetch**: resolves and pre-downloads the next 3 tracks in background to reduce song change delay
@@ -29,7 +29,7 @@ Built with `mpv` + `yt-dlp` and controlled via IPC socket from your terminal.
 - Multi-platform support: YouTube, SoundCloud, Bandcamp, Spotify
 - Custom playlist aliases via config file
 - Shuffle mode
-- Clean audio startup/shutdown (no pops or crackles)
+- Clean audio startup/shutdown (no pops or crackles between sessions)
 
 ## Dependencies
 
@@ -262,7 +262,7 @@ Save the file as `themes/mytheme.json` and it will appear automatically in `musi
 | `↑` / `↓` | previous / next track |
 | `←` / `→` | seek -5s / +5s |
 | `s` | cycle playback speed (1x → 1.25x → 1.5x → 2x → 3x) |
-| `v` | toggle RGB bar visualizer |
+| `v` | cycle visualizer style (bars → braille → off) |
 | `t` | toggle track list |
 | `f` | search tracks in playlist |
 | `c` | cycle color theme |
@@ -279,9 +279,17 @@ Press `f` to enter search mode. Type to filter tracks by name:
 
 Up to 8 matching results are displayed. The search closes the track list if it was open.
 
-## RGB Bar Visualizer
+**Instant prefetch**: as soon as a result is highlighted (by typing or by navigating with arrows), the player resolves its URL and warms the CDN cache in the background. If you pause on a result for a second before pressing Enter, the jump is near-instant instead of waiting for yt-dlp resolution.
 
-When `cava` is installed, the player displays an RGB frequency visualizer that **adapts to your terminal width**. Each bar is colored in a theme-aware gradient:
+## Visualizer
+
+When `cava` is installed, the player displays a frequency visualizer that **adapts to your terminal width**. Each column is colored in a theme-aware gradient, with a **G** (bass, Grave) to **A** (treble, Agudo) indicator underneath.
+
+Press `v` during playback to cycle through 2 styles:
+
+### 1. Bars (default)
+
+Classic vertical RGB bars. Each bar is 2 characters wide with a smooth 5-stop theme gradient from low to high frequencies.
 
 ```
   ██                    ██            ██
@@ -292,10 +300,16 @@ When `cava` is installed, the player displays an RGB frequency visualizer that *
   G────────────────────────────────────────────A
 ```
 
-- **G** = Grave (bass/low frequencies)
-- **A** = Agudo (treble/high frequencies)
-- Colors change based on the active theme
-- Bar count adapts dynamically to terminal width
+### 2. Braille
+
+Uses Unicode braille characters to pack **2 bars per character** with **4 sub-pixels per row**, for a higher-resolution, finer-grained look at the same terminal width.
+
+```
+  ⣿ ⣶ ⣤ ⣀ ⣦ ⣿ ⣶ ⣤ ⣀ ⣴ ⣿ ⣦ ⣀
+  G──────────────────────────A
+```
+
+Cava runs continuously in the background during a session, so toggling between styles (or cycling on/off) is instant with no calibration delay.
 
 ### Isolated audio
 
@@ -303,7 +317,7 @@ When PulseAudio is available (`pactl`), the visualizer reacts **only to the play
 
 If PulseAudio is not available, the visualizer falls back to monitoring all system audio.
 
-Toggle with `v` during playback. Use `--no-vis` to start without it.
+Start without the visualizer: `music <playlist> --no-vis`
 
 ## Track List
 

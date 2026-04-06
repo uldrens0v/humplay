@@ -127,7 +127,7 @@ _music_set_theme() {
 # ── RGB Bar Visualizer ───────────────────────────────────────────
 
 _music_bars_build() {
-    local data="$1" max_val=$2 target_cols=$3 bar_rows=${4:-5}
+    local data="$1" max_val=$2 target_cols=$3 bar_rows=${4:-5} design=${5:-0}
     local -a vals=("${(@s/;/)data}")
     local n=${#vals}
     local _e=$'\e' _n=$'\n'
@@ -137,71 +137,99 @@ _music_bars_build() {
     _VIS_LINES=0
     (( n == 0 )) && return
 
-    local display_bars=$(( (target_cols - 4) / 3 ))
+    # Braille packs 2 bars per char → double the bar count
+    local display_bars
+    (( design == 1 )) && display_bars=$(( ((target_cols - 4) / 3) * 2 )) \
+                      || display_bars=$(( (target_cols - 4) / 3 ))
     (( display_bars < 4 )) && display_bars=4
-    (( display_bars > 80 )) && display_bars=80
+    (( display_bars > 120 )) && display_bars=120
 
-    # Group cava values into display_bars by averaging
+    # Group cava into display_bars
     local -a disp_vals
     local di gs ge gi sum count
     for (( di = 1; di <= display_bars; di++ )); do
         sum=0; count=0
-        gs=$(( (di - 1) * n / display_bars + 1 ))
-        ge=$(( di * n / display_bars ))
-        (( ge < gs )) && ge=$gs
-        (( ge > n )) && ge=$n
+        gs=$(( (di-1)*n/display_bars + 1 ))
+        ge=$(( di*n/display_bars ))
+        (( ge < gs )) && ge=$gs; (( ge > n )) && ge=$n
         for (( gi = gs; gi <= ge; gi++ )); do
-            (( sum += ${vals[$gi]:-0} ))
-            (( count++ ))
+            (( sum += ${vals[$gi]:-0} )); (( count++ ))
         done
-        disp_vals[$di]=$(( count > 0 ? sum / count : 0 ))
+        disp_vals[$di]=$(( count > 0 ? sum/count : 0 ))
     done
 
-    # Theme-aware gradient with 5 color stops
+    # Theme gradient (5 stops)
     local -a _br _bg _bb
     local i t seg frac stops=5
     for (( i = 1; i <= display_bars; i++ )); do
-        t=$(( ((i - 1) * (stops - 1) * 256) / (display_bars > 1 ? display_bars - 1 : 1) ))
-        seg=$(( t / 256 ))
-        (( seg >= stops - 1 )) && seg=$(( stops - 2 ))
-        frac=$(( t - seg * 256 ))
-        local s1=$(( seg + 1 )) s2=$(( seg + 2 ))
-        _br[$i]=$(( (_th_vr[$s1] * (256 - frac) + _th_vr[$s2] * frac) / 256 ))
-        _bg[$i]=$(( (_th_vg[$s1] * (256 - frac) + _th_vg[$s2] * frac) / 256 ))
-        _bb[$i]=$(( (_th_vb[$s1] * (256 - frac) + _th_vb[$s2] * frac) / 256 ))
+        t=$(( ((i-1)*(stops-1)*256) / (display_bars > 1 ? display_bars-1 : 1) ))
+        seg=$(( t/256 )); (( seg >= stops-1 )) && seg=$(( stops-2 ))
+        frac=$(( t - seg*256 ))
+        local s1=$(( seg+1 )) s2=$(( seg+2 ))
+        _br[$i]=$(( (_th_vr[$s1]*(256-frac) + _th_vr[$s2]*frac) / 256 ))
+        _bg[$i]=$(( (_th_vg[$s1]*(256-frac) + _th_vg[$s2]*frac) / 256 ))
+        _bb[$i]=$(( (_th_vb[$s1]*(256-frac) + _th_vb[$s2]*frac) / 256 ))
     done
 
-    # Map to sub-row heights (0..bar_rows*8)
+    # Heights: bars use 8 sub-pixels/row, braille uses 4
+    local h_scale
+    (( design == 1 )) && h_scale=$(( bar_rows * 4 )) || h_scale=$(( bar_rows * 8 ))
     local -a _h
     for (( i = 1; i <= display_bars; i++ )); do
-        _h[$i]=$(( (disp_vals[$i] * bar_rows * 8) / (max_val > 0 ? max_val : 1) ))
-        (( _h[$i] > bar_rows * 8 )) && _h[$i]=$(( bar_rows * 8 ))
+        _h[$i]=$(( (disp_vals[$i] * h_scale) / (max_val > 0 ? max_val : 1) ))
+        (( _h[$i] > h_scale )) && _h[$i]=$h_scale
     done
 
-    # Render bar rows (top to bottom)
     local row rb rt h ci
-    for (( row = bar_rows; row >= 1; row-- )); do
-        _VIS_FRAME+="  "
-        rb=$(( (row - 1) * 8 )); rt=$(( row * 8 ))
-        for (( i = 1; i <= display_bars; i++ )); do
-            h=${_h[$i]}
-            if (( h >= rt )); then
-                _VIS_FRAME+="${_e}[38;2;${_br[$i]};${_bg[$i]};${_bb[$i]}m██"
-            elif (( h > rb )); then
-                ci=$(( 8 - (h - rb) ))
-                (( ci > 7 )) && ci=7
-                _VIS_FRAME+="${_e}[38;2;${_br[$i]};${_bg[$i]};${_bb[$i]}m${blocks[$((ci+1))]}${blocks[$((ci+1))]}"
-            else
+    local num_chars=0
+
+    case "$design" in
+
+        0) # ── Bars ──
+            for (( row = bar_rows; row >= 1; row-- )); do
+                _VIS_FRAME+="  "; rb=$(( (row-1)*8 )); rt=$(( row*8 ))
+                for (( i = 1; i <= display_bars; i++ )); do
+                    h=${_h[$i]}
+                    if   (( h >= rt )); then _VIS_FRAME+="${_e}[38;2;${_br[$i]};${_bg[$i]};${_bb[$i]}m██"
+                    elif (( h >  rb )); then ci=$(( 8-(h-rb) )); (( ci>7 )) && ci=7
+                                             _VIS_FRAME+="${_e}[38;2;${_br[$i]};${_bg[$i]};${_bb[$i]}m${blocks[$((ci+1))]}${blocks[$((ci+1))]}"
+                    else _VIS_FRAME+="  "; fi
+                    (( i < display_bars )) && _VIS_FRAME+=" "
+                done
+                _VIS_FRAME+="${_e}[0m${_e}[K${_n}"; (( _VIS_LINES++ ))
+            done
+            ;;
+
+        1) # ── Braille (2 bars per char, 4 sub-pixels per row) ──
+            num_chars=$(( display_bars / 2 ))
+            local bp bitmask lh rh li ri _cp
+            for (( row = bar_rows; row >= 1; row-- )); do
                 _VIS_FRAME+="  "
-            fi
-            (( i < display_bars )) && _VIS_FRAME+=" "
-        done
-        _VIS_FRAME+="${_e}[0m${_e}[K${_n}"
-        (( _VIS_LINES++ ))
-    done
+                bp=$(( (row-1) * 4 ))
+                for (( ci = 1; ci <= num_chars; ci++ )); do
+                    li=$(( (ci-1)*2+1 )); ri=$(( li+1 ))
+                    lh=${_h[$li]:-0}; rh=${_h[$ri]:-0}
+                    bitmask=0
+                    (( lh >= bp+4 )) && (( bitmask |= 1   ))
+                    (( lh >= bp+3 )) && (( bitmask |= 2   ))
+                    (( lh >= bp+2 )) && (( bitmask |= 4   ))
+                    (( lh >= bp+1 )) && (( bitmask |= 64  ))
+                    (( rh >= bp+4 )) && (( bitmask |= 8   ))
+                    (( rh >= bp+3 )) && (( bitmask |= 16  ))
+                    (( rh >= bp+2 )) && (( bitmask |= 32  ))
+                    (( rh >= bp+1 )) && (( bitmask |= 128 ))
+                    _cp=$(( 0x2800 + bitmask ))
+                    _VIS_FRAME+="${_e}[38;2;${_br[$li]};${_bg[$li]};${_bb[$li]}m${(#)_cp} "
+                done
+                _VIS_FRAME+="${_e}[0m${_e}[K${_n}"; (( _VIS_LINES++ ))
+            done
+            ;;
+
+    esac
 
     # G────A frequency indicator
-    local lw=$(( display_bars * 3 - 1 - 2 ))
+    local lw
+    (( design == 1 )) && lw=$(( num_chars*2 - 3 )) || lw=$(( display_bars*3 - 3 ))
     (( lw < 1 )) && lw=1
     local dashes=""
     for (( i = 0; i < lw; i++ )); do dashes+="─"; done
@@ -427,7 +455,7 @@ music() {
         echo "\nControls:"
         echo "  space      pause/play       -/+   volume down/up"
         echo "  ↑/↓        prev/next track  ←/→   seek -5s/+5s"
-        echo "  v          toggle visualizer s     cycle speed (1x-3x)"
+        echo "  v          cycle visualizer (bars→braille→off) s   cycle speed (1x-3x)"
         echo "  t          toggle track list f     search tracks"
         echo "  c          cycle color theme"
         echo "  q          quit"
@@ -780,6 +808,20 @@ CAVAEOF
         done
     }
 
+    _music_prefetch_idx() {
+        local idx="$1"
+        local raw=$(echo '{"command":["get_property","playlist"]}' | socat - "$sock" 2>/dev/null)
+        local pf_url=$(echo "$raw" | jq -r ".data[$idx].filename // empty" 2>/dev/null)
+        [[ -z "$pf_url" || "$pf_url" == /tmp/* ]] && return
+        [[ -n "${_pf_done[$pf_url]}" ]] && return
+        _pf_done[$pf_url]=1
+        {
+            local _stream_url
+            _stream_url=$(yt-dlp -f "ba/b" -g --extractor-args "youtube:player_client=android_music" "$pf_url" 2>/dev/null | head -1)
+            [[ -n "$_stream_url" ]] && curl -s -r 0-524287 -o /dev/null "$_stream_url" 2>/dev/null
+        } &!
+    }
+
     # ── cleanup ──
     _music_cleanup() {
         # Block further INT signals during cleanup to prevent partial teardown
@@ -860,6 +902,7 @@ CAVAEOF
     local -a _speeds=(1 1.25 1.5 2 3)
     local _search_mode=0 _search_query="" _search_sel=0 _sr_lim=0
     local -a _search_results=() _search_indices=()
+    local _vis_design=0
 
     printf "\e[H\e[2J"
     stty -echo 2>/dev/null
@@ -867,8 +910,8 @@ CAVAEOF
     # ── main loop ──
     while kill -0 $mpv_pid 2>/dev/null; do
 
-        # Drain cava FIFO
-        if (( vis_enabled && cava_pid > 0 )); then
+        # Drain cava FIFO (always, even when vis is toggled off, to keep cava flowing)
+        if (( cava_pid > 0 )); then
             _cline=""
             while read -t 0.005 -u 3 _cline 2>/dev/null; do
                 cava_data="$_cline"
@@ -1014,7 +1057,7 @@ CAVAEOF
                 vis_data="1"
                 for (( _vi = 1; _vi < cava_bars; _vi++ )); do vis_data+=";1"; done
             fi
-            _music_bars_build "$vis_data" 100 $cols $vis_rows
+            _music_bars_build "$vis_data" 100 $cols $vis_rows $_vis_design
             frame+="$_VIS_FRAME"
         fi
 
@@ -1067,11 +1110,13 @@ CAVAEOF
                     case "$seq" in
                         "[A") # Up
                             (( _search_sel > 0 )) && (( _search_sel-- ))
+                            (( ${#_search_indices[@]} > 0 )) && _music_prefetch_idx "${_search_indices[$((_search_sel+1))]}"
                             ;;
                         "[B") # Down (clamp to visible results, max 8)
                             _sr_lim=${#_search_results[@]}
                             (( _sr_lim > 8 )) && _sr_lim=8
                             (( _search_sel < _sr_lim - 1 )) && (( _search_sel++ ))
+                            (( ${#_search_indices[@]} > 0 )) && _music_prefetch_idx "${_search_indices[$((_search_sel+1))]}"
                             ;;
                         *) # Escape alone — cancel search
                             if [[ -z "$seq" ]]; then
@@ -1108,6 +1153,7 @@ CAVAEOF
                                 _search_indices+=($(( _si - 1 )))
                             fi
                         done
+                        (( ${#_search_indices[@]} > 0 )) && _music_prefetch_idx "${_search_indices[1]}"
                     fi
                     ;;
                 [[:print:]]) # Regular character — append to query
@@ -1122,6 +1168,8 @@ CAVAEOF
                             _search_indices+=($(( _si - 1 )))
                         fi
                     done
+                    # Prefetch first result as soon as it appears
+                    (( ${#_search_indices[@]} > 0 )) && _music_prefetch_idx "${_search_indices[1]}"
                     ;;
             esac
         else
@@ -1140,22 +1188,16 @@ CAVAEOF
                     # Always refresh tracklist for search
                     _music_tl_refresh
                     ;;
-                v)  if (( vis_enabled )); then
-                        vis_enabled=0
+                v)  # Cycle: bars → dots → off → bars
+                    # Cava keeps running in background so reactivation is instant
+                    if (( !vis_enabled )); then
                         if (( cava_pid > 0 )); then
-                            kill $cava_pid 2>/dev/null
-                            exec 3<&- 2>/dev/null
-                            cava_pid=0
+                            vis_enabled=1; _vis_design=0
                         fi
-                        cava_data=""
-                    elif command -v cava &>/dev/null; then
-                        vis_enabled=1
-                        rm -f "$cava_fifo"
-                        mkfifo "$cava_fifo" 2>/dev/null
-                        cava -p "$cava_conf" &>/dev/null &!
-                        cava_pid=$!
-                        exec 3<>"$cava_fifo"
-                        cava_data=""
+                    elif (( _vis_design == 0 )); then
+                        _vis_design=1
+                    else
+                        vis_enabled=0; _vis_design=0
                     fi
                     ;;
                 t)  if (( tracklist_open )); then
