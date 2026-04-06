@@ -1,4 +1,4 @@
-# zsh-music-player
+# humplay
 
 A terminal music player for YouTube playlists with an RGB bar visualizer and track list. No ads, no browser, just music.
 
@@ -17,7 +17,8 @@ Built with `mpv` + `yt-dlp` and controlled via IPC socket from your terminal.
 - No ads (bypasses YouTube web player via yt-dlp)
 - **2 visualizer styles** cycled with `v`: bars and braille — both adapting to terminal width with a G (bass) to A (treble) frequency indicator
 - **Isolated visualizer**: reacts only to the player's audio, not system-wide sound (via PulseAudio)
-- **Track list overlay** (press `t`) showing previous and upcoming songs with real-time updates
+- **Track list overlay** (press `t`) showing 2 previous and 2 upcoming songs with real-time updates
+- **Responsive layout**: on small terminals, the visualizer auto-shrinks or hides so the track list / search results are never clipped
 - **Track search** (press `f`) — find tracks by name within the current playlist, with instant prefetch of highlighted results
 - **Theme system**: 14 color themes loaded from JSON files — set permanently, cycle live, or create your own
 - **Playback speed** control (press `s`) — cycles through 1x, 1.25x, 1.5x, 2x, 3x with themed arrow indicators
@@ -139,8 +140,8 @@ sudo chmod a+rx /usr/local/bin/yt-dlp
 ## Install
 
 ```bash
-git clone https://github.com/uldrens0v/zsh-music-player.git
-cd zsh-music-player
+git clone https://github.com/uldrens0v/humplay.git
+cd humplay
 chmod +x install.sh
 ./install.sh
 source ~/.zshrc
@@ -148,7 +149,7 @@ source ~/.zshrc
 
 ## Configure playlists
 
-Edit `~/.zsh-music-player/playlists.conf`:
+Edit `~/.humplay/playlists.conf`:
 
 ```conf
 # Format: name=URL
@@ -168,22 +169,22 @@ chill-spotify=https://open.spotify.com/playlist/37i9dQZF1DX4WYpdgoIcn6
 Or fetch playlists automatically from a YouTube channel (by name or URL):
 
 ```bash
-music fetch uldrens0v
-music fetch https://youtube.com/@uldrens0v
+humplay fetch uldrens0v
+humplay fetch https://youtube.com/@uldrens0v
 ```
 
 ## Usage
 
 ```bash
-music                        # list available playlists
-music lofi                   # play a playlist
-music lofi -s                # play shuffled
-music lofi --no-vis          # play without visualizer
-music lofi --theme=winter    # play with a specific theme
-music "URL"                  # play any URL directly
-music fetch <source>         # import playlists from a channel/URL
-music --theme                # show available themes
-music --theme autumn         # set default theme permanently
+humplay                        # list available playlists
+humplay lofi                   # play a playlist
+humplay lofi -s                # play shuffled
+humplay lofi --no-vis          # play without visualizer
+humplay lofi --theme=winter    # play with a specific theme
+humplay "URL"                  # play any URL directly
+humplay fetch <source>         # import playlists from a channel/URL
+humplay --theme                # show available themes
+humplay --theme autumn         # set default theme permanently
 ```
 
 ## Themes
@@ -207,7 +208,7 @@ music --theme autumn         # set default theme permanently
 | `dracula` | Classic Dracula palette (purple, pink, green) |
 | `mono` | Monochrome grayscale |
 
-Set a persistent theme: `music --theme winter`
+Set a persistent theme: `humplay --theme winter`
 
 Cycle themes live during playback: press `c`
 
@@ -251,7 +252,7 @@ Themes are JSON files in the `themes/` directory. To create your own, add a `.js
 | `bar_dim` | Progress bar background color |
 | `visualizer.stops` | 5 RGB gradient stops for the frequency bars (low to high) |
 
-Save the file as `themes/mytheme.json` and it will appear automatically in `music --theme`.
+Save the file as `themes/mytheme.json` and it will appear automatically in `humplay --theme`.
 
 ## Controls
 
@@ -317,23 +318,21 @@ When PulseAudio is available (`pactl`), the visualizer reacts **only to the play
 
 If PulseAudio is not available, the visualizer falls back to monitoring all system audio.
 
-Start without the visualizer: `music <playlist> --no-vis`
+Start without the visualizer: `humplay <playlist> --no-vis`
 
 ## Track List
 
 Press `t` during playback to open the track list overlay:
 
 ```
-     3. Previous Song
-     4. Another Song
+     4. Previous Song
      5. One More Song
    ► 6. Currently Playing ◄
      7. Next Song
      8. After That
-     9. Later Song
 ```
 
-- Shows up to 3 previous and 3 next tracks around the current one
+- Shows up to 2 previous and 2 next tracks around the current one
 - If the current song is the **first**, no previous tracks are shown
 - If the current song is the **last**, no next tracks are shown
 - Current track is highlighted with reverse video
@@ -352,9 +351,9 @@ Press `t` during playback to open the track list overlay:
 Import playlists from any supported platform:
 
 ```bash
-music fetch https://soundcloud.com/artist/sets/playlist
-music fetch https://artist.bandcamp.com/album/name
-music fetch https://open.spotify.com/playlist/xxxxx
+humplay fetch https://soundcloud.com/artist/sets/playlist
+humplay fetch https://artist.bandcamp.com/album/name
+humplay fetch https://open.spotify.com/playlist/xxxxx
 ```
 
 ## How it works
@@ -395,7 +394,7 @@ music fetch https://open.spotify.com/playlist/xxxxx
 ## Uninstall
 
 ```bash
-cd zsh-music-player
+cd humplay
 chmod +x uninstall.sh
 ./uninstall.sh
 source ~/.zshrc

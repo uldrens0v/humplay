@@ -1,26 +1,26 @@
-# --- ZSH MUSIC PLAYER ---
+# --- humplay ---
 # Terminal YouTube music player with IPC controls, RGB bar visualizer, and track list
 # Dependencies: mpv, yt-dlp, socat, jq
 # Optional: cava (RGB bar visualizer), spotdl (Spotify support)
 
-MUSIC_PLAYER_DIR="${0:A:h}"
-MUSIC_PLAYLISTS_FILE="${MUSIC_PLAYER_DIR}/playlists.conf"
+HUMPLAY_DIR="${0:A:h}"
+HUMPLAY_PLAYLISTS_FILE="${HUMPLAY_DIR}/playlists.conf"
 
 # ── Playlist loading ──────────────────────────────────────────────
 
-_music_load_playlists() {
+_humplay_load_playlists() {
     declare -gA PLAYLISTS
     PLAYLISTS=()
-    [[ ! -f "$MUSIC_PLAYLISTS_FILE" ]] && return
+    [[ ! -f "$HUMPLAY_PLAYLISTS_FILE" ]] && return
     while IFS='=' read -r key val || [[ -n "$key" ]]; do
         [[ -z "$key" || "$key" == \#* ]] && continue
         key="${key## }"; key="${key%% }"
         val="${val## }"; val="${val%% }"
         PLAYLISTS[$key]="$val"
-    done < "$MUSIC_PLAYLISTS_FILE"
+    done < "$HUMPLAY_PLAYLISTS_FILE"
 }
 
-_music_sanitize_name() {
+_humplay_sanitize_name() {
     local name="$1"
     name="${name:l}"
     name="${name//á/a}"; name="${name//é/e}"
@@ -34,7 +34,7 @@ _music_sanitize_name() {
 
 # ── Platform detection & display ─────────────────────────────────
 
-_music_detect_platform() {
+_humplay_detect_platform() {
     local url="$1"
     case "$url" in
         *youtube.com/*|*youtu.be/*)     echo "youtube" ;;
@@ -45,7 +45,7 @@ _music_detect_platform() {
     esac
 }
 
-_music_platform_icon() {
+_humplay_platform_icon() {
     case "$1" in
         youtube)    printf "\e[31m▶\e[0m" ;;
         soundcloud) printf "\e[38;5;208m☁\e[0m" ;;
@@ -55,7 +55,7 @@ _music_platform_icon() {
     esac
 }
 
-_music_platform_label() {
+_humplay_platform_label() {
     case "$1" in
         youtube)    printf "\e[1;31mYouTube\e[0m" ;;
         soundcloud) printf "\e[1;38;5;208mSoundCloud\e[0m" ;;
@@ -67,25 +67,25 @@ _music_platform_label() {
 
 # ── Theme System ─────────────────────────────────────────────────
 
-MUSIC_THEMES_DIR="${MUSIC_PLAYER_DIR}/themes"
+HUMPLAY_THEMES_DIR="${HUMPLAY_DIR}/themes"
 
-_music_load_themes() {
-    typeset -ga _music_themes=()
+_humplay_load_themes() {
+    typeset -ga _humplay_themes=()
     local _tf
-    for _tf in "${MUSIC_THEMES_DIR}"/*.json(N); do
+    for _tf in "${HUMPLAY_THEMES_DIR}"/*.json(N); do
         local _tn=$(jq -r '.name // empty' "$_tf" 2>/dev/null)
-        [[ -n "$_tn" ]] && _music_themes+=("$_tn")
+        [[ -n "$_tn" ]] && _humplay_themes+=("$_tn")
     done
-    (( ${#_music_themes[@]} == 0 )) && _music_themes=(summer)
+    (( ${#_humplay_themes[@]} == 0 )) && _humplay_themes=(summer)
 }
 
-_music_set_theme() {
+_humplay_set_theme() {
     local theme="${1:-summer}"
     typeset -g _th_name="$theme"
     local _e=$'\e'
     typeset -g _th_reset="${_e}[0m"
 
-    local _tf="${MUSIC_THEMES_DIR}/${theme}.json"
+    local _tf="${HUMPLAY_THEMES_DIR}/${theme}.json"
     if [[ -f "$_tf" ]]; then
         local _j
         _j=$(< "$_tf")
@@ -126,7 +126,7 @@ _music_set_theme() {
 
 # ── RGB Bar Visualizer ───────────────────────────────────────────
 
-_music_bars_build() {
+_humplay_bars_build() {
     local data="$1" max_val=$2 target_cols=$3 bar_rows=${4:-5} design=${5:-0}
     local -a vals=("${(@s/;/)data}")
     local n=${#vals}
@@ -239,12 +239,12 @@ _music_bars_build() {
 
 # ── Fetch subcommand ──────────────────────────────────────────────
 
-_music_fetch() {
+_humplay_fetch() {
     local source="$1"
     local platform="youtube"
 
     if [[ "$source" == http* ]]; then
-        platform=$(_music_detect_platform "$source")
+        platform=$(_humplay_detect_platform "$source")
     fi
 
     case "$platform" in
@@ -269,19 +269,19 @@ _music_fetch() {
                 echo "No public playlists found"
                 rm -f "$tmpfile"; return 1
             fi
-            echo "" >> "$MUSIC_PLAYLISTS_FILE"
-            echo "# Playlists from ${source}" >> "$MUSIC_PLAYLISTS_FILE"
-            _music_load_playlists
+            echo "" >> "$HUMPLAY_PLAYLISTS_FILE"
+            echo "# Playlists from ${source}" >> "$HUMPLAY_PLAYLISTS_FILE"
+            _humplay_load_playlists
             local existing_urls=""
             for v in ${(v)PLAYLISTS}; do existing_urls+="$v"$'\n'; done
             local count=0 skipped=0
             while IFS=$'\t' read -r title url; do
-                local key=$(_music_sanitize_name "$title")
+                local key=$(_humplay_sanitize_name "$title")
                 [[ -z "$key" || -z "$url" ]] && continue
                 if echo "$existing_urls" | grep -qF "$url"; then
                     (( skipped++ )); continue
                 fi
-                echo "${key}=${url}" >> "$MUSIC_PLAYLISTS_FILE"
+                echo "${key}=${url}" >> "$HUMPLAY_PLAYLISTS_FILE"
                 (( count++ ))
             done < "$tmpfile"
             rm -f "$tmpfile"
@@ -302,19 +302,19 @@ _music_fetch() {
                 echo "No playlists found at $source"
                 rm -f "$tmpfile"; return 1
             fi
-            echo "" >> "$MUSIC_PLAYLISTS_FILE"
-            echo "# SoundCloud playlists from ${source}" >> "$MUSIC_PLAYLISTS_FILE"
-            _music_load_playlists
+            echo "" >> "$HUMPLAY_PLAYLISTS_FILE"
+            echo "# SoundCloud playlists from ${source}" >> "$HUMPLAY_PLAYLISTS_FILE"
+            _humplay_load_playlists
             local existing_urls=""
             for v in ${(v)PLAYLISTS}; do existing_urls+="$v"$'\n'; done
             local count=0 skipped=0
             while IFS=$'\t' read -r title url; do
-                local key=$(_music_sanitize_name "$title")
+                local key=$(_humplay_sanitize_name "$title")
                 [[ -z "$key" || -z "$url" ]] && continue
                 if echo "$existing_urls" | grep -qF "$url"; then
                     (( skipped++ )); continue
                 fi
-                echo "${key}=${url}" >> "$MUSIC_PLAYLISTS_FILE"
+                echo "${key}=${url}" >> "$HUMPLAY_PLAYLISTS_FILE"
                 (( count++ ))
             done < "$tmpfile"
             rm -f "$tmpfile"
@@ -328,7 +328,7 @@ _music_fetch() {
                 return 1
             fi
             echo "Resolving Spotify playlist via spotdl..."
-            local spot_m3u="${MUSIC_PLAYER_DIR}/spotify-$(_music_sanitize_name "$source").m3u"
+            local spot_m3u="${HUMPLAY_DIR}/spotify-$(_humplay_sanitize_name "$source").m3u"
             spotdl url "$source" > "$spot_m3u" 2>/dev/null
             if [[ ! -s "$spot_m3u" ]]; then
                 local spot_json=$(mktemp --suffix=.spotdl)
@@ -342,12 +342,12 @@ _music_fetch() {
                 echo "Could not resolve Spotify playlist"
                 rm -f "$spot_m3u"; return 1
             fi
-            local key=$(_music_sanitize_name "spotify-$(basename "$source")")
-            echo "" >> "$MUSIC_PLAYLISTS_FILE"
-            echo "# Spotify playlist" >> "$MUSIC_PLAYLISTS_FILE"
-            echo "${key}=${spot_m3u}" >> "$MUSIC_PLAYLISTS_FILE"
+            local key=$(_humplay_sanitize_name "spotify-$(basename "$source")")
+            echo "" >> "$HUMPLAY_PLAYLISTS_FILE"
+            echo "# Spotify playlist" >> "$HUMPLAY_PLAYLISTS_FILE"
+            echo "${key}=${spot_m3u}" >> "$HUMPLAY_PLAYLISTS_FILE"
             local track_count=$(wc -l < "$spot_m3u")
-            echo "Saved $track_count tracks as: music $key"
+            echo "Saved $track_count tracks as: humplay $key"
             ;;
 
         bandcamp)
@@ -361,13 +361,13 @@ _music_fetch() {
                 echo "No tracks found at $source"
                 rm -f "$tmpfile"; return 1
             fi
-            echo "" >> "$MUSIC_PLAYLISTS_FILE"
-            echo "# Bandcamp: ${source}" >> "$MUSIC_PLAYLISTS_FILE"
-            local key=$(_music_sanitize_name "$(echo "$source" | sed 's|.*://||;s|/.*||')")
-            echo "${key}=${source}" >> "$MUSIC_PLAYLISTS_FILE"
+            echo "" >> "$HUMPLAY_PLAYLISTS_FILE"
+            echo "# Bandcamp: ${source}" >> "$HUMPLAY_PLAYLISTS_FILE"
+            local key=$(_humplay_sanitize_name "$(echo "$source" | sed 's|.*://||;s|/.*||')")
+            echo "${key}=${source}" >> "$HUMPLAY_PLAYLISTS_FILE"
             local track_count=$(wc -l < "$tmpfile")
             rm -f "$tmpfile"
-            echo "Added Bandcamp album ($track_count tracks) as: music $key"
+            echo "Added Bandcamp album ($track_count tracks) as: humplay $key"
             ;;
 
         *)
@@ -381,44 +381,44 @@ _music_fetch() {
                 echo "Could not fetch playlist from $source"
                 rm -f "$tmpfile"; return 1
             fi
-            echo "" >> "$MUSIC_PLAYLISTS_FILE"
-            echo "# Playlist from ${source}" >> "$MUSIC_PLAYLISTS_FILE"
-            local key=$(_music_sanitize_name "$(echo "$source" | sed 's|.*://||;s|/.*||')")
-            echo "${key}=${source}" >> "$MUSIC_PLAYLISTS_FILE"
+            echo "" >> "$HUMPLAY_PLAYLISTS_FILE"
+            echo "# Playlist from ${source}" >> "$HUMPLAY_PLAYLISTS_FILE"
+            local key=$(_humplay_sanitize_name "$(echo "$source" | sed 's|.*://||;s|/.*||')")
+            echo "${key}=${source}" >> "$HUMPLAY_PLAYLISTS_FILE"
             local track_count=$(wc -l < "$tmpfile")
             rm -f "$tmpfile"
-            echo "Added playlist ($track_count tracks) as: music $key"
+            echo "Added playlist ($track_count tracks) as: humplay $key"
             ;;
     esac
 
-    _music_load_playlists
+    _humplay_load_playlists
     echo "\nAvailable playlists:"
     for key in ${(k)PLAYLISTS}; do
         local purl="${PLAYLISTS[$key]}"
-        local picon=$(_music_platform_icon "$(_music_detect_platform "$purl")")
-        echo "  ${picon} music $key"
+        local picon=$(_humplay_platform_icon "$(_humplay_detect_platform "$purl")")
+        echo "  ${picon} humplay $key"
     done
 }
 
 # ── Main command ──────────────────────────────────────────────────
 
-music() {
-    _music_load_playlists
-    _music_load_themes
+humplay() {
+    _humplay_load_playlists
+    _humplay_load_themes
 
     # ── fetch ──
     if [[ "$1" == "fetch" ]]; then
         if [[ -z "$2" ]]; then
             echo "Usage:"
-            echo "  music fetch <youtube_username>"
-            echo "  music fetch <youtube_playlist_url>"
-            echo "  music fetch <soundcloud_url>"
-            echo "  music fetch <spotify_playlist_url>"
-            echo "  music fetch <bandcamp_url>"
-            echo "  music fetch <any_url>  (yt-dlp generic)"
+            echo "  humplay fetch <youtube_username>"
+            echo "  humplay fetch <youtube_playlist_url>"
+            echo "  humplay fetch <soundcloud_url>"
+            echo "  humplay fetch <spotify_playlist_url>"
+            echo "  humplay fetch <bandcamp_url>"
+            echo "  humplay fetch <any_url>  (yt-dlp generic)"
             return 1
         fi
-        _music_fetch "$2"
+        _humplay_fetch "$2"
         return $?
     fi
 
@@ -429,28 +429,28 @@ music() {
         local _pkey _purl _pplat
         for _pkey in ${(k)PLAYLISTS}; do
             _purl="${PLAYLISTS[$_pkey]}"
-            _pplat=$(_music_detect_platform "$_purl")
+            _pplat=$(_humplay_detect_platform "$_purl")
             _plat_lists[$_pplat]+="${_pkey}"$'\n'
         done
         local _plat_order=(youtube soundcloud bandcamp spotify generic)
         local _shown=0
         for _pplat in "${_plat_order[@]}"; do
             [[ -z "${_plat_lists[$_pplat]}" ]] && continue
-            local _plabel=$(_music_platform_label "$_pplat")
-            local _picon=$(_music_platform_icon "$_pplat")
+            local _plabel=$(_humplay_platform_label "$_pplat")
+            local _picon=$(_humplay_platform_icon "$_pplat")
             echo "\n  ${_picon} ${_plabel}"
             while IFS= read -r _pkey; do
                 [[ -z "$_pkey" ]] && continue
-                echo "     music ${_pkey}"
+                echo "     humplay ${_pkey}"
             done <<< "${_plat_lists[$_pplat]}"
             (( _shown++ ))
         done
-        (( _shown == 0 )) && echo "  No playlists configured. See: music fetch <source>"
+        (( _shown == 0 )) && echo "  No playlists configured. See: humplay fetch <source>"
         echo "\nUsage:"
-        echo "  music <playlist>       [--shuffle|-s] [--no-vis] [--theme=THEME]"
-        echo "  music <url>            play any URL directly"
-        echo "  music fetch <source>   import playlists"
-        echo "\nThemes: ${_music_themes[*]}"
+        echo "  humplay <playlist>       [--shuffle|-s] [--no-vis] [--theme=THEME]"
+        echo "  humplay <url>            play any URL directly"
+        echo "  humplay fetch <source>   import playlists"
+        echo "\nThemes: ${_humplay_themes[*]}"
         echo "\nPlatforms: YouTube, SoundCloud, Bandcamp, Spotify (needs spotdl)"
         echo "\nControls:"
         echo "  space      pause/play       -/+   volume down/up"
@@ -489,30 +489,30 @@ music() {
     # --theme <name> as two separate args (not playing, just setting)
     if [[ "$1" == "--theme" && -n "$2" && "$2" != --* && -z "$3" ]]; then
         local _valid=0
-        for _t in "${_music_themes[@]}"; do
+        for _t in "${_humplay_themes[@]}"; do
             [[ "$_t" == "$2" ]] && _valid=1
         done
         if (( _valid )); then
-            echo "$2" > "${MUSIC_PLAYER_DIR}/.theme"
+            echo "$2" > "${HUMPLAY_DIR}/.theme"
             echo "Theme set: $2"
         else
             echo "Unknown theme '$2'."
-            echo "Available themes: ${_music_themes[*]}"
+            echo "Available themes: ${_humplay_themes[*]}"
         fi
         return 0
     fi
     if (( _only_theme )); then
         echo "Available themes:"
         local _saved_theme=""
-        [[ -f "${MUSIC_PLAYER_DIR}/.theme" ]] && _saved_theme=$(<"${MUSIC_PLAYER_DIR}/.theme")
-        for _t in "${_music_themes[@]}"; do
+        [[ -f "${HUMPLAY_DIR}/.theme" ]] && _saved_theme=$(<"${HUMPLAY_DIR}/.theme")
+        for _t in "${_humplay_themes[@]}"; do
             if [[ "$_t" == "$_saved_theme" ]]; then
                 echo "  ${_t}  ← active"
             else
                 echo "  ${_t}"
             fi
         done
-        echo "\nUsage: music --theme <name>"
+        echo "\nUsage: humplay --theme <name>"
         return 0
     fi
 
@@ -533,20 +533,20 @@ music() {
     if [[ -n "$_theme_from_arg" ]]; then
         theme="$_theme_from_arg"
         # Save theme persistently
-        echo "$theme" > "${MUSIC_PLAYER_DIR}/.theme"
-    elif [[ -f "${MUSIC_PLAYER_DIR}/.theme" ]]; then
-        theme=$(<"${MUSIC_PLAYER_DIR}/.theme")
+        echo "$theme" > "${HUMPLAY_DIR}/.theme"
+    elif [[ -f "${HUMPLAY_DIR}/.theme" ]]; then
+        theme=$(<"${HUMPLAY_DIR}/.theme")
     else
         theme="summer"
     fi
 
-    _music_set_theme "$theme"
+    _humplay_set_theme "$theme"
 
     local url="${PLAYLISTS[$name]:-$name}"
-    local platform=$(_music_detect_platform "$url")
-    local icon=$(_music_platform_icon "$platform")
-    local plat_label=$(_music_platform_label "$platform")
-    local sock="/tmp/mpv-music-$$"
+    local platform=$(_humplay_detect_platform "$url")
+    local icon=$(_humplay_platform_icon "$platform")
+    local plat_label=$(_humplay_platform_label "$platform")
+    local sock="/tmp/mpv-humplay-$$"
     local mpv_playlist_file=""
 
     # ── resolve Spotify URLs at play time ──
@@ -569,7 +569,7 @@ music() {
     # Kill any leftover mpv instances using our socket pattern
     local _had_orphans=0
     local _old_sock
-    for _old_sock in /tmp/mpv-music-*(N); do
+    for _old_sock in /tmp/mpv-humplay-*(N); do
         if [[ -S "$_old_sock" ]]; then
             echo '{"command":["set_property","volume",0]}' | socat - "$_old_sock" 2>/dev/null >/dev/null
             echo '{"command":["set_property","pause",true]}' | socat - "$_old_sock" 2>/dev/null >/dev/null
@@ -584,19 +584,19 @@ music() {
     if command -v pactl &>/dev/null; then
         local _orphan _orphan_name
         # First suspend any orphaned null-sinks to flush their buffers
-        for _orphan_name in $(pactl list short sinks 2>/dev/null | grep music_player_vis | awk '{print $2}'); do
+        for _orphan_name in $(pactl list short sinks 2>/dev/null | grep humplay_vis | awk '{print $2}'); do
             pactl suspend-sink "$_orphan_name" 1 2>/dev/null
         done
         sleep 0.08
         # Then unload all orphaned modules (loopbacks + null-sinks)
-        for _orphan in $(pactl list short modules 2>/dev/null | grep music_player_vis | awk '{print $1}'); do
+        for _orphan in $(pactl list short modules 2>/dev/null | grep humplay_vis | awk '{print $1}'); do
             pactl unload-module "$_orphan" 2>/dev/null
         done
     fi
 
     # ── PulseAudio: isolated sink for visualizer ──
     # Loopback is created later, after mpv is stable, to avoid audio pops
-    local _pa_null_id="" _pa_loopback_id="" _pa_sink_name="music_player_vis_$$"
+    local _pa_null_id="" _pa_loopback_id="" _pa_sink_name="humplay_vis_$$"
     if (( ! no_vis )) && command -v pactl &>/dev/null; then
         _pa_null_id=$(pactl load-module module-null-sink \
             sink_name="$_pa_sink_name" \
@@ -683,7 +683,7 @@ music() {
 
     # ── cava setup for bar visualizer ──
     local cava_pid=0
-    local cava_fifo="/tmp/cava-music-$$"
+    local cava_fifo="/tmp/cava-humplay-$$"
     local cava_conf="/tmp/cava-conf-$$"
     local vis_enabled=0
     local cava_bars=64
@@ -735,7 +735,7 @@ CAVAEOF
     local _tl_pos=-1
     local _tl_last_refresh=-1
 
-    _music_is_unavailable() {
+    _humplay_is_unavailable() {
         local t="${1:l}"
         [[ "$t" == *"private video"* || "$t" == *"deleted video"* || \
            "$t" == *"video privado"* || "$t" == *"video eliminado"* || \
@@ -743,7 +743,7 @@ CAVAEOF
         return 1
     }
 
-    _music_tl_refresh() {
+    _humplay_tl_refresh() {
         local raw=$(echo '{"command":["get_property","playlist"]}' | socat - "$sock" 2>/dev/null)
         _tl_count=$(echo "$raw" | jq '.data | length' 2>/dev/null)
         [[ "$_tl_count" == "null" || -z "$_tl_count" ]] && _tl_count=0
@@ -751,7 +751,7 @@ CAVAEOF
         _tl_titles=()
         local _line _idx=1 _remove_indices=()
         while IFS= read -r _line; do
-            if [[ -n "$_line" ]] && _music_is_unavailable "$_line"; then
+            if [[ -n "$_line" ]] && _humplay_is_unavailable "$_line"; then
                 _remove_indices+=( $(( _idx - 1 )) )
             elif [[ -n "$_line" ]]; then
                 _tl_titles[$_idx]="$_line"
@@ -782,7 +782,7 @@ CAVAEOF
     typeset -gA _pf_done
     _pf_done=()
 
-    _music_prefetch() {
+    _humplay_prefetch() {
         local raw=$(echo '{"command":["get_property","playlist"]}' | socat - "$sock" 2>/dev/null)
         local cur=$(_mpv_get playlist-pos)
         [[ -z "$cur" ]] && return
@@ -808,7 +808,7 @@ CAVAEOF
         done
     }
 
-    _music_prefetch_idx() {
+    _humplay_prefetch_idx() {
         local idx="$1"
         local raw=$(echo '{"command":["get_property","playlist"]}' | socat - "$sock" 2>/dev/null)
         local pf_url=$(echo "$raw" | jq -r ".data[$idx].filename // empty" 2>/dev/null)
@@ -823,7 +823,7 @@ CAVAEOF
     }
 
     # ── cleanup ──
-    _music_cleanup() {
+    _humplay_cleanup() {
         # Block further INT signals during cleanup to prevent partial teardown
         trap '' INT
         [[ -n "$_startup_sink" ]] && pactl set-sink-mute "$_startup_sink" 0 2>/dev/null
@@ -862,12 +862,12 @@ CAVAEOF
         printf "  ${_th_dim}See you next time.${_th_reset}\n\n"
     }
 
-    trap "_music_cleanup; trap - INT; return" INT
+    trap "_humplay_cleanup; trap - INT; return" INT
 
     # ── initial cleanup of unavailable tracks + prefetch ──
     sleep 1
-    _music_tl_refresh
-    _music_prefetch
+    _humplay_tl_refresh
+    _humplay_prefetch
 
     # ── loading complete ──
     printf "\e[H\e[2J"
@@ -939,13 +939,13 @@ CAVAEOF
         # Prefetch when track changes
         if [[ -n "$cur_pl_pos" && "$cur_pl_pos" != "$_prefetch_pos" ]]; then
             _prefetch_pos=$cur_pl_pos
-            _music_prefetch
+            _humplay_prefetch
         fi
 
         # Refresh track list
         if (( tracklist_open )); then
             if [[ -n "$cur_pl_pos" && "$cur_pl_pos" != "$_tl_pos" ]] || (( _tl_last_refresh < 0 )) || (( frame_n % 60 == 0 )); then
-                _music_tl_refresh
+                _humplay_tl_refresh
                 _tl_last_refresh=$frame_n
             fi
             [[ -n "$cur_pl_pos" ]] && _tl_pos=$cur_pl_pos
@@ -996,9 +996,13 @@ CAVAEOF
         # ═══ BUILD FRAME ═══
         frame=""
 
+        # ── Overlays (search + tracklist) — track line count for visualizer sizing ──
+        local _overlay_lines=0
+
         # ── Search mode ──
         if (( _search_mode )); then
             frame+="  ${_th_accent}/${reset} ${_th_primary}${_search_query}${reset}█${clr}${_n}"
+            (( _overlay_lines++ ))
             if (( ${#_search_results[@]} > 0 )); then
                 local _sr_max=8 _sr_i
                 (( _sr_max > ${#_search_results[@]} )) && _sr_max=${#_search_results[@]}
@@ -1008,11 +1012,14 @@ CAVAEOF
                     else
                         frame+="  ${_th_dim}   ${_search_results[$_sr_i]}${reset}${clr}${_n}"
                     fi
+                    (( _overlay_lines++ ))
                 done
             elif [[ -n "$_search_query" ]]; then
                 frame+="  ${_th_dim}No results${reset}${clr}${_n}"
+                (( _overlay_lines++ ))
             fi
             frame+="${clr}${_n}"
+            (( _overlay_lines++ ))
         fi
 
         # ── Track list ──
@@ -1020,12 +1027,12 @@ CAVAEOF
             tl_cur=${_tl_pos:-0}
             tl_start=$tl_cur
             if (( tl_cur > 0 )); then
-                tl_start=$(( tl_cur - 3 ))
+                tl_start=$(( tl_cur - 2 ))
                 (( tl_start < 0 )) && tl_start=0
             fi
             tl_end=$tl_cur
             if (( tl_cur < _tl_count - 1 )); then
-                tl_end=$(( tl_cur + 3 ))
+                tl_end=$(( tl_cur + 2 ))
                 (( tl_end >= _tl_count )) && tl_end=$(( _tl_count - 1 ))
             fi
             tl_max=$(( cols - 12 ))
@@ -1040,24 +1047,26 @@ CAVAEOF
                     tl_num=$(( tl_i + 1 ))
                     frame+="  ${_th_dim}   ${tl_num}. ${tl_title}${reset}${clr}${_n}"
                 fi
+                (( _overlay_lines++ ))
             done
         fi
 
         # ── Visualizer ──
+        # Skip entirely if overlays + status leave no room; otherwise shrink rows to fit.
         if (( vis_enabled )); then
-            vis_rows=5
-            reserved=4
-            (( tracklist_open && _tl_count > 0 )) && reserved=11
+            # 3 status lines + 1 freq indicator line + overlays
+            reserved=$(( 4 + _overlay_lines ))
             max_vis=$(( term_rows - reserved ))
-            (( max_vis < 2 )) && max_vis=2
+            vis_rows=5
             (( vis_rows > max_vis )) && vis_rows=$max_vis
-
+        fi
+        if (( vis_enabled && vis_rows >= 2 )); then
             vis_data="$cava_data"
             if [[ -z "$vis_data" ]]; then
                 vis_data="1"
                 for (( _vi = 1; _vi < cava_bars; _vi++ )); do vis_data+=";1"; done
             fi
-            _music_bars_build "$vis_data" 100 $cols $vis_rows $_vis_design
+            _humplay_bars_build "$vis_data" 100 $cols $vis_rows $_vis_design
             frame+="$_VIS_FRAME"
         fi
 
@@ -1110,13 +1119,13 @@ CAVAEOF
                     case "$seq" in
                         "[A") # Up
                             (( _search_sel > 0 )) && (( _search_sel-- ))
-                            (( ${#_search_indices[@]} > 0 )) && _music_prefetch_idx "${_search_indices[$((_search_sel+1))]}"
+                            (( ${#_search_indices[@]} > 0 )) && _humplay_prefetch_idx "${_search_indices[$((_search_sel+1))]}"
                             ;;
                         "[B") # Down (clamp to visible results, max 8)
                             _sr_lim=${#_search_results[@]}
                             (( _sr_lim > 8 )) && _sr_lim=8
                             (( _search_sel < _sr_lim - 1 )) && (( _search_sel++ ))
-                            (( ${#_search_indices[@]} > 0 )) && _music_prefetch_idx "${_search_indices[$((_search_sel+1))]}"
+                            (( ${#_search_indices[@]} > 0 )) && _humplay_prefetch_idx "${_search_indices[$((_search_sel+1))]}"
                             ;;
                         *) # Escape alone — cancel search
                             if [[ -z "$seq" ]]; then
@@ -1153,7 +1162,7 @@ CAVAEOF
                                 _search_indices+=($(( _si - 1 )))
                             fi
                         done
-                        (( ${#_search_indices[@]} > 0 )) && _music_prefetch_idx "${_search_indices[1]}"
+                        (( ${#_search_indices[@]} > 0 )) && _humplay_prefetch_idx "${_search_indices[1]}"
                     fi
                     ;;
                 [[:print:]]) # Regular character — append to query
@@ -1169,7 +1178,7 @@ CAVAEOF
                         fi
                     done
                     # Prefetch first result as soon as it appears
-                    (( ${#_search_indices[@]} > 0 )) && _music_prefetch_idx "${_search_indices[1]}"
+                    (( ${#_search_indices[@]} > 0 )) && _humplay_prefetch_idx "${_search_indices[1]}"
                     ;;
             esac
         else
@@ -1186,7 +1195,7 @@ CAVAEOF
                     _search_indices=()
                     _search_sel=0
                     # Always refresh tracklist for search
-                    _music_tl_refresh
+                    _humplay_tl_refresh
                     ;;
                 v)  # Cycle: bars → dots → off → bars
                     # Cava keeps running in background so reactivation is instant
@@ -1214,14 +1223,14 @@ CAVAEOF
                     ;;
                 c)  # Cycle color theme
                     _ci=1; _th_idx=0
-                    for _cth in "${_music_themes[@]}"; do
+                    for _cth in "${_humplay_themes[@]}"; do
                         if [[ "$_cth" == "$_th_name" ]]; then
                             _th_idx=$_ci; break
                         fi
                         (( _ci++ ))
                     done
-                    _next_idx=$(( _th_idx % ${#_music_themes[@]} + 1 ))
-                    _music_set_theme "${_music_themes[$_next_idx]}"
+                    _next_idx=$(( _th_idx % ${#_humplay_themes[@]} + 1 ))
+                    _humplay_set_theme "${_humplay_themes[$_next_idx]}"
                     ;;
                 q)  break ;;
                 $'\e')
@@ -1240,6 +1249,6 @@ CAVAEOF
         (( frame_n++ ))
     done
 
-    _music_cleanup
+    _humplay_cleanup
     trap - INT
 }

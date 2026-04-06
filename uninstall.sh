@@ -1,9 +1,9 @@
 #!/bin/bash
 set -e
 
-INSTALL_DIR="$HOME/.zsh-music-player"
+INSTALL_DIR="$HOME/.humplay"
 
-echo "=== zsh-music-player uninstaller ==="
+echo "=== humplay uninstaller ==="
 
 # remove directory
 if [[ -d "$INSTALL_DIR" ]]; then
@@ -12,8 +12,8 @@ if [[ -d "$INSTALL_DIR" ]]; then
 fi
 
 # remove lines from .zshrc
-if grep -qF "zsh-music-player" "$HOME/.zshrc" 2>/dev/null; then
-    sed -i '/zsh-music-player/d' "$HOME/.zshrc"
+if grep -qF "humplay" "$HOME/.zshrc" 2>/dev/null; then
+    sed -i '/humplay/d' "$HOME/.zshrc"
     echo "Removed from .zshrc"
 fi
 

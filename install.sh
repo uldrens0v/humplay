@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-INSTALL_DIR="$HOME/.zsh-music-player"
+INSTALL_DIR="$HOME/.humplay"
 REPO_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-echo "=== zsh-music-player installer ==="
+echo "=== humplay installer ==="
 
 # check dependencies
 missing=()
@@ -27,7 +27,7 @@ fi
 # copy files
 echo "Installing to $INSTALL_DIR..."
 mkdir -p "$INSTALL_DIR"
-cp "$REPO_DIR/music.zsh" "$INSTALL_DIR/"
+cp "$REPO_DIR/humplay.zsh" "$INSTALL_DIR/"
 cp -r "$REPO_DIR/themes" "$INSTALL_DIR/"
 
 # create playlists.conf if it doesn't exist
@@ -39,10 +39,10 @@ else
 fi
 
 # add source to .zshrc if not present
-SOURCE_LINE="source \"$INSTALL_DIR/music.zsh\""
-if ! grep -qF "zsh-music-player" "$HOME/.zshrc" 2>/dev/null; then
+SOURCE_LINE="source \"$INSTALL_DIR/humplay.zsh\""
+if ! grep -qF "humplay.zsh" "$HOME/.zshrc" 2>/dev/null; then
     echo "" >> "$HOME/.zshrc"
-    echo "# --- zsh-music-player ---" >> "$HOME/.zshrc"
+    echo "# --- humplay ---" >> "$HOME/.zshrc"
     echo "$SOURCE_LINE" >> "$HOME/.zshrc"
     echo "Added to .zshrc"
 else
@@ -53,4 +53,4 @@ echo ""
 echo "Installation complete!"
 echo "Run: source ~/.zshrc"
 echo "Edit your playlists at: $INSTALL_DIR/playlists.conf"
-echo "Usage: music <playlist> [--shuffle]"
+echo "Usage: humplay <playlist> [--shuffle]"
