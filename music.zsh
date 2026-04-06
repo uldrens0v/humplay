@@ -585,7 +585,7 @@ music() {
         --demuxer-max-bytes=150MiB
         --demuxer-readahead-secs=10
         --audio-buffer=0.2
-        --pulse-buffer=250
+        --pulse-buffer=50
         --ytdl-raw-options=format="ba/b",extractor-args="youtube:player_client=android_music",no-warnings=
     )
     # Route mpv audio to the isolated sink if available
@@ -600,6 +600,13 @@ music() {
         mpv_args+=("--playlist=$url")
     else
         mpv_args+=("$url")
+    fi
+
+    # ── mute output sink at startup to silence any PA residual from previous session ──
+    local _startup_sink=""
+    if command -v pactl &>/dev/null; then
+        _startup_sink=$(pactl info 2>/dev/null | awk '/Default Sink:/{print $NF}')
+        [[ -n "$_startup_sink" ]] && pactl set-sink-mute "$_startup_sink" 1 2>/dev/null
     fi
 
     # ── loading message ──
@@ -641,7 +648,8 @@ music() {
             latency_msec=30 2>/dev/null)
         sleep 0.15
     fi
-    # Unpause and fade in volume
+    # Unmute output sink and start playback
+    [[ -n "$_startup_sink" ]] && pactl set-sink-mute "$_startup_sink" 0 2>/dev/null
     _mpv_cmd '["set_property","volume",100]'
     _mpv_cmd '["set_property","pause",false]'
 
@@ -776,6 +784,7 @@ CAVAEOF
     _music_cleanup() {
         # Block further INT signals during cleanup to prevent partial teardown
         trap '' INT
+        [[ -n "$_startup_sink" ]] && pactl set-sink-mute "$_startup_sink" 0 2>/dev/null
         printf "\e[?1049l\e[?25h"
         exec 3<&- 2>/dev/null
         if (( cava_pid > 0 )); then
@@ -783,28 +792,27 @@ CAVAEOF
             wait $cava_pid 2>/dev/null
             cava_pid=0
         fi
-        # Step 1: Stop audio production — mute + pause mpv FIRST (before touching PA modules)
-        # This prevents new audio from entering the loopback buffer
+        # Step 1: Mute + pause mpv so no new audio enters PA buffers
         if [[ -S "$sock" ]]; then
             echo '{"command":["set_property","volume",0]}' | socat - "$sock" 2>/dev/null >/dev/null
             echo '{"command":["set_property","pause",true]}' | socat - "$sock" 2>/dev/null >/dev/null
         fi
-        # Step 2: Suspend the null-sink to flush its buffer and stop feeding the monitor
-        [[ -n "$_pa_null_id" ]] && pactl suspend-sink "$_pa_sink_name" 1 2>/dev/null
-        # Step 3: Wait for the loopback buffer to drain (latency_msec=30 + margin)
+        # Step 2: Wait for mute to propagate through the PA buffer (pulse-buffer=50ms + margin)
         sleep 0.08
-        # Step 4: Now safe to unload loopback — its buffer should be empty/silent
-        [[ -n "$_pa_loopback_id" ]] && pactl unload-module "$_pa_loopback_id" 2>/dev/null
-        # Step 5: Quit mpv (audio was already muted+paused, going to suspended null-sink)
+        # Step 3: Quit mpv — its PA client disconnects cleanly, draining and freeing its buffers
         if [[ -S "$sock" ]]; then
             echo '{"command":["quit"]}' | socat - "$sock" 2>/dev/null >/dev/null
-            sleep 0.1
         fi
-        # Wait for mpv to exit, then fallback kill if still running
+        # Step 4: Wait for mpv to fully exit before touching PA modules
+        # This is the critical fix: mpv's PA client must be gone before we unload modules,
+        # otherwise residual audio in its buffers plays back on the next player launch.
         wait $mpv_pid 2>/dev/null
         kill -0 $mpv_pid 2>/dev/null && kill $mpv_pid 2>/dev/null
         wait $mpv_pid 2>/dev/null
-        # Step 6: Remove null-sink after mpv is fully stopped
+        # Step 5: mpv is gone — now safe to tear down PA modules with no residual audio
+        [[ -n "$_pa_null_id" ]] && pactl suspend-sink "$_pa_sink_name" 1 2>/dev/null
+        sleep 0.05
+        [[ -n "$_pa_loopback_id" ]] && pactl unload-module "$_pa_loopback_id" 2>/dev/null
         [[ -n "$_pa_null_id" ]] && pactl unload-module "$_pa_null_id" 2>/dev/null
         rm -rf "$sock" "$cava_fifo" "$cava_conf" "$mpv_playlist_file" "$_pf_cache_dir"
         stty sane 2>/dev/null
