@@ -7,9 +7,7 @@ Built with `mpv` + `yt-dlp` and controlled via IPC socket from your terminal.
 ![shell](https://img.shields.io/badge/shell-zsh-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
 
-## Preview
 
-![preview](screenshots/preview.png)
 
 ## Features
 
